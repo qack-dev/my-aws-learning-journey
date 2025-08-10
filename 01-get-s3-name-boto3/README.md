@@ -48,8 +48,8 @@ Pythonの仮想環境 (`venv`) を利用して、プロジェクトに必要な�
     # 仮想環境を作成 (初回のみ)
     python -m venv venv
 
-    # 仮想環境を有効化 (Windowsの場合は `venv\Scripts\activate`)
-    source venv/bin/activate
+    # 仮想環境を有効化 (Linuxの場合は `source venv/bin/activate`)
+    venv\Scripts\activate
 
     # Boto3ライブラリをインストール
     pip install boto3
