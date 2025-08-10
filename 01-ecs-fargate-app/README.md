@@ -1,0 +1,66 @@
+# AWSハンズオン：ECS Fargateによるサーバレスコンテナ実行環境
+
+## 概要
+
+このプロジェクトは、AWS Elastic Container Service (ECS) と AWS Fargate を利用して、サーバレスなコンテナアプリケーション実行環境を構築するハンズオンの成果物です。
+
+EC2のような仮想サーバの管理を一切行うことなく、Dockerコンテナをデプロイ・実行するプロセスを学習しました。
+
+## 使用した主な技術・サービス
+
+- **Docker:** アプリケーションのコンテナ化
+- **AWS Elastic Container Registry (ECR):** コンテナイメージのプライベートな保管場所
+- **AWS Elastic Container Service (ECS):** コンテナオーケストレーションサービス
+- **AWS Fargate:** サーバレスコンピューティングエンジン
+
+## 特徴と学習ポイント
+
+### 1. サーバレスコンテナ (Fargate)
+EC2インスタンスのプロビジョニング、OSのパッチ適用、スケーリングといったサーバ管理業務から解放される**Fargate**のメリットを学びました。これにより、開発者はインフラではなくアプリケーションそのものに集中できるという、サーバレスの強力な利点を体感しました。
+
+### 2. コンテナ化 (Dockerization)
+アプリケーションとその実行環境（今回はNginx Webサーバ）を**Dockerイメージ**としてパッケージ化しました。これにより、「開発環境では動いたのに本番環境では動かない」といった環境差異の問題を解決できる、コンテナ技術のポータビリティの重要性を理解しました。
+
+### 3. コンテナレジストリ (ECR)
+作成したDockerイメージを、セキュアでプライベートなコンテナレジストリである**ECR**に保存・管理しました。これは、実際の開発におけるCI/CDパイプラインで、ビルドされたアプリケーション（コンテナイメージ）を保管する場所としての役割を持ちます。
+
+## 実行/再現の手順
+
+このハンズオンは、以下のステップで再現することができます。
+
+#### 1. ローカルでの準備
+このディレクトリにある `Dockerfile` と `index.html` を使って、Dockerイメージをローカルでビルドします。
+
+```bash
+docker build -t my-fargate-app .
+```
+
+#### 2. コンテナイメージのプッシュ
+AWSコンソールでECRリポジトリ（例: `my-fargate-repo`）を作成します。
+作成したローカルイメージにECRリポジトリのURIでタグ付けし、ECRへプッシュします。
+
+```bash
+# ECRへログイン (リージョンとAWSアカウントIDは適宜変更してください)
+aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin <YOUR_AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-1.amazonaws.com
+
+# タグ付け
+docker tag my-fargate-app:latest <YOUR_AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-1.amazonaws.com/my-fargate-repo:latest
+
+# プッシュ
+docker push <YOUR_AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-1.amazonaws.com/my-fargate-repo:latest
+```
+
+#### 3. ECSでのサービス実行
+1.  **ECSクラスター**をFargate起動タイプで作成します。
+2.  ECRにプッシュしたイメージを使用する**タスク定義**を作成します。この際、CPU/メモリサイズやポートマッピング（コンテナポート: 80）を指定します。
+3.  作成したクラスターとタスク定義を使って、**サービス**を作成します。サービス設定で、タスクにパブリックIPが自動で割り当てられるように設定することで、インターネットからアクセス可能になります。
+
+## クリーンアップ
+
+意図しない課金を防ぐため、ハンズオン終了後は必ず以下の順序でリソースを削除してください。
+
+1.  ECSサービスを削除（タスクの必要数を0に更新してから削除すると確実です）。
+2.  ECSクラスターを削除。
+3.  ECRリポジトリ内のイメージを削除し、リポジトリ自体を削除。
+4.  関連するタスク定義のすべてのリビジョンの登録を解除。
+5.  CloudWatch Logsに自動生成されたロググループを削除。
