@@ -39,16 +39,7 @@ docker build -t my-fargate-app .
 AWSコンソールでECRリポジトリ（例: `my-fargate-repo`）を作成します。
 作成したローカルイメージにECRリポジトリのURIでタグ付けし、ECRへプッシュします。
 
-```bash
-# ECRへログイン (リージョンとAWSアカウントIDは適宜変更してください)
-aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin <YOUR_AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-1.amazonaws.com
-
-# タグ付け
-docker tag my-fargate-app:latest <YOUR_AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-1.amazonaws.com/my-fargate-repo:latest
-
-# プッシュ
-docker push <YOUR_AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-1.amazonaws.com/my-fargate-repo:latest
-```
+作成したリポジトリを選択し、右上にある「プッシュコマンドの表示」をクリックし、表示されたコマンドを実行することで行えます。
 
 #### 3. ECSでのサービス実行
 1.  **ECSクラスター**をFargate起動タイプで作成します。
