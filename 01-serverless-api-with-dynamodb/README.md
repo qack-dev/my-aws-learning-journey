@@ -46,43 +46,16 @@
 
 ## APIエンドポイント仕様
 
-### 投稿を作成 (Create)
+### 作成 (Create)
 
-- **Method:** `POST`
-- **Endpoint:** `/posts`
-- **Request Body (JSON):**
-  ```json
-  {
-    "message": "これはテスト投稿です。"
-  }
-  ```
-- **Success Response (201 Created):**
-  ```json
-  {
-    "id": "generated-uuid",
-    "message": "これはテスト投稿です。",
-    "timestamp": 1678886400
-  }
+  ```bash
+    curl -X POST -H "Content-Type: application/json" -d "{\"message\": \"初めてのサーバーレス投稿です！\"}" "https://xxxxxxxxxx.execute-api.ap-northeast-1.amazonaws.com/v1/posts"
   ```
 
-### 投稿を全件取得 (Read)
+### 全件取得 (Read)
 
-- **Method:** `GET`
-- **Endpoint:** `/posts`
-- **Success Response (200 OK):**
-  ```json
-  [
-    {
-      "id": "uuid-1",
-      "message": "投稿1",
-      "timestamp": 1678886400
-    },
-    {
-      "id": "uuid-2",
-      "message": "投稿2",
-      "timestamp": 1678886500
-    }
-  ]
+  ```bash
+    curl -X GET "https://xxxxxxxxxx.execute-api.ap-northeast-1.amazonaws.com/v1/posts"
   ```
 
 ## セットアップとデプロイ
