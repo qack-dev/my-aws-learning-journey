@@ -1,0 +1,100 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ---[SECURITY HARDENED]--- Links S3 static site (private) and CloudFront with OAC.
+
+# ------------------------------------------------------------#
+#  Parameters
+#  Input values to make this template reusable.
+# ------------------------------------------------------------#
+Parameters:
+  S3BucketName:
+    Type: String
+    Description: Enter a globally unique name for the S3 bucket to be created.
+
+# ------------------------------------------------------------#
+#  Resources
+#  The AWS infrastructure components to be created.
+# ------------------------------------------------------------#
+Resources:
+  # --- S3 Bucket (Private Configuration) ---
+  # This bucket is now fully private. Public access is blocked.
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref S3BucketName
+      # WebsiteConfiguration is removed as it's not needed for OAC.
+      # PublicAccessBlockConfiguration blocks all public access, making the bucket private.
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # --- CloudFront Origin Access Control (OAC) ---
+  # Creates a special identity for CloudFront to access the S3 bucket.
+  CloudFrontOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub oac-${S3BucketName}
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  # --- S3 Bucket Policy (Allows access ONLY from CloudFront) ---
+  # This policy grants s3:GetObject permission exclusively to the CloudFront service,
+  # on the condition that the request comes from our specific CloudFront distribution.
+  S3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument:
+        Statement:
+          - Sid: AllowCloudFrontServicePrincipal
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "arn:aws:s3:::${S3BucketName}/*"
+            Condition:
+              StringEquals:
+                "AWS:SourceArn": !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
+
+  # --- CloudFront Distribution (Configured to use OAC) ---
+  # The distribution is updated to use OAC to securely fetch content
+  # from the private S3 bucket.
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: 'This is my first IaC-managed distribution.'
+        Origins:
+          - Id: S3Origin
+            # The DomainName is changed to the S3 bucket's REST API endpoint.
+            DomainName: !GetAtt S3Bucket.DomainName
+            # CustomOriginConfig is replaced with S3OriginConfig.
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+            # The OriginAccessControlId is set to the ID of the OAC created above.
+            OriginAccessControlId: !GetAtt CloudFrontOAC.Id
+        Enabled: true
+        DefaultRootObject: index.html
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # CachingOptimized
+        IPV6Enabled: true
+
+# ------------------------------------------------------------#
+#  Outputs
+#  Values that are displayed after the stack is created.
+# ------------------------------------------------------------#
+Outputs:
+  CloudFrontURL:
+    Description: CloudFront distribution domain name
+    Value: !Sub "https://{${CloudFrontDistribution.DomainName}}"
+    Export:
+      Name: !Sub "${AWS::StackName}-CloudFrontURL"
