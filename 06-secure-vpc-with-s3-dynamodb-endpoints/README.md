@@ -37,7 +37,7 @@
               +-- [EC2 Instance (Private)]
 ```
 
-```Mermaid
+```mermaid
 graph TD
     A["AWS Cloud"] --> B["VPC: 10.0.0.0/16"]
 
